@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        form {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Directory</h1>
+    <ul id="directory-list">
+        <!-- Directory entries will go here -->
+    </ul>
+    <h2>Add New Profile</h2>
+    <form id="add-profile-form">
+        <label for="profile-title">Name:</label>
+        <input type="text" id="profile-title" required>
+        <label for="profile-content">Description:</label>
+        <textarea id="profile-content" required></textarea>
+        <button type="submit">Add Profile</button>
+    </form>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const directoryList = document.getElementById('directory-list');
+            const addProfileForm = document.getElementById('add-profile-form');
+            const profileTitleInput = document.getElementById('profile-title');
+            const profileContentInput = document.getElementById('profile-content');
+
+            // Fetch existing profiles from GitHub Pages
+            fetch('profiles.json')
+                .then(response => response.json())
+                .then(profiles => {
+                    profiles.forEach(profile => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${profile.title}</strong><p>${profile.content}</p>`;
+                        directoryList.appendChild(li);
+                    });
+                });
+
+            // Handle form submission
+            addProfileForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const title = profileTitleInput.value;
+                const content = profileContentInput.value;
+
+                fetch('https://api.github.com/repos/your-username/directory-website/contents/profiles.json', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/vnd.github.v3.raw',
+                        'Authorization': `token YOUR_GITHUB_TOKEN`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const profiles = JSON.parse(atob(data.content));
+                    profiles.push({ title, content });
+                    return fetch('https://api.github.com/repos/your-username/directory-website/contents/profiles.json', {
+                        method: 'PUT',
+                        headers: {
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Authorization': `token YOUR_GITHUB_TOKEN`
+                        },
+                        body: JSON.stringify({
+                            message: 'Add new profile',
+                            content: btoa(JSON.stringify(profiles)),
+                            sha: data.sha
+                        })
+                    });
+                })
+                .then(() => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${title}</strong><p>${content}</p>`;
+                    directoryList.appendChild(li);
+                    profileTitleInput.value = '';
+                    profileContentInput.value = '';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
